@@ -1,0 +1,1129 @@
+<?php include 'header-alt.php'; ?>
+
+    <style>
+        .category-section {
+            margin-bottom: 3rem;
+        }
+        .item-card {
+            position: relative;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            background: #fff;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+            transition: all 0.3s ease;
+        }
+        .item-card.completed {
+            background-color: #f0fdf4;
+            border-color: #28a745;
+            box-shadow: 0 0.25rem 0.5rem rgba(40, 167, 69, 0.15);
+        }
+        .item-card.todo-marked:not(.completed) {
+            border-color: #0d6efd;
+            box-shadow: 0 0.125rem 0.25rem rgba(13, 110, 253, 0.12);
+        }
+        @keyframes cardComplete {
+            0%   { transform: scale(1); }
+            40%  { transform: scale(1.025); box-shadow: 0 0.5rem 1.25rem rgba(40, 167, 69, 0.35); }
+            100% { transform: scale(1); }
+        }
+        .item-card.completing {
+            animation: cardComplete 0.5s ease-out;
+        }
+        /* ── Card header row: icon + checkboxes ── */
+        .card-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.65rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .card-cat-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        .card-checkboxes {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+        .checkbox-group input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .checkbox-group input[type="checkbox"]:disabled {
+            cursor: not-allowed;
+            opacity: 0.65;
+        }
+        .checkbox-group label {
+            cursor: pointer;
+            margin-bottom: 0;
+        }
+        .todo-group {
+            color: #0d6efd;
+        }
+        .completed-group {
+            color: #28a745;
+        }
+        .todo-group.hidden-group {
+            display: none !important;
+        }
+        /* ── Sticky progress tracker ── */
+        .progress-tracker {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #fff;
+            border-bottom: 2px solid #dee2e6;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+            padding: 0.6rem 0;
+            margin-bottom: 2rem;
+            border-radius: 0;
+        }
+        .progress-tracker-inner {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .tracker-label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #002056;
+            gap: 0.15rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            line-height: 1.2;
+        }
+        .tracker-label i {
+            font-size: 1.2rem;
+        }
+        .tracker-bars {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1.1rem;
+            padding-top: 0.5rem;
+        }
+        .award-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .award-title-compact {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-weight: 700;
+            font-size: 0.78rem;
+            color: #333;
+            white-space: nowrap;
+            flex-shrink: 0;
+            width: 4.5rem;
+        }
+        .progress-bar-container {
+            background-color: #e9ecef;
+            border-radius: 50px;
+            height: 18px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            border-radius: 50px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.7rem;
+        }
+        .silver-progress {
+            background: linear-gradient(90deg, #6c757d, #adb5bd);
+        }
+        .gold-progress {
+            background: linear-gradient(90deg, #ffc107, #fd7e14);
+        }
+        .award-badge {
+            padding: 0.15rem 0.55rem;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 0.68rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .badge-not-achieved {
+            background-color: #f8f9fa;
+            color: #6c757d;
+            border: 1.5px solid #dee2e6;
+        }
+        .badge-achieved {
+            color: white;
+        }
+        .badge-silver {
+            background: linear-gradient(135deg, #6c757d, #adb5bd);
+        }
+        .badge-gold {
+            background: linear-gradient(135deg, #ffc107, #fd7e14);
+        }
+        /* suppress floating label text in compact bar — the badge carries that info */
+        .tracker-bars .progress-threshold::before {
+            display: none;
+        }
+        .print-btn {
+            background: #002056;
+            color: white;
+            border: none;
+            padding: 0.45rem 0.85rem;
+            font-size: 0.8rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: background 0.3s ease;
+        }
+        .print-btn:hover {
+            background: #61769c;
+        }
+        .celebration {
+            animation: celebration 1s ease-in-out;
+        }
+        @keyframes celebration {
+            0%   { transform: scale(1); }
+            50%  { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .gold-icon   { color: #ffd700; }
+        .silver-icon { color: #c0c0c0; }
+        .resource-button {
+            display: inline-block;
+            margin: 0.25rem 0.5rem 0.25rem 0;
+        }
+        .resources-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #dee2e6;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+        .alert-section {
+            padding: 0.75rem;
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        .alert-section .alert-icon {
+            color: #f0ad4e;
+            margin-right: 0.5rem;
+        }
+
+        /* ── Threshold goal line ── */
+        .progress-bar-wrapper {
+            position: relative;
+            margin-top: 1rem;
+            flex: 1;
+            min-width: 0;
+        }
+        /* compact bar needs no top margin (threshold label is suppressed there) */
+        .tracker-bars .progress-bar-wrapper {
+            margin-top: 0;
+        }
+        .progress-threshold {
+            position: absolute;
+            top: -6px;
+            bottom: -3px;
+            width: 2px;
+            background: rgba(0, 0, 0, 0.28);
+            border-radius: 1px;
+            z-index: 2;
+            pointer-events: none;
+            transition: left 0.5s ease, background 0.3s ease;
+        }
+        .progress-threshold::before {
+            content: attr(data-label);
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: #666;
+            white-space: nowrap;
+        }
+        .progress-threshold.achieved {
+            background: #28a745;
+        }
+        .progress-threshold.achieved::before {
+            color: #28a745;
+        }
+
+        /* ── Responsive tracker ── */
+        @media (max-width: 768px) {
+            .tracker-label { display: none; }
+            .award-title-compact {
+                width: auto;
+                min-width: 0;
+                font-size: 0.72rem;
+            }
+            .award-badge {
+                font-size: 0.62rem;
+                padding: 0.1rem 0.4rem;
+                flex-shrink: 1;
+                max-width: 8rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+        }
+        @media (max-width: 480px) {
+            .progress-tracker-inner { gap: 0.5rem; }
+            .tracker-bars { gap: 0.85rem; }
+            .award-progress { gap: 0.4rem; }
+            .award-title-compact { font-size: 0.68rem; }
+            .print-btn {
+                padding: 0.4rem 0.55rem;
+                font-size: 0.72rem;
+            }
+            .award-badge { max-width: 5.5rem; }
+        }
+
+        .print-only { display: none; }
+        /* ── Print styles ── */
+        #print-header { display: none; }
+        @page {
+            @top-left    { content: none; }
+            @top-center  { content: none; }
+            @top-right   { content: none; }
+            @bottom-left { content: none; }
+            @bottom-right { content: none; }
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 9pt;
+                font-family: sans-serif;
+                color: #555;
+            }
+        }
+        @media print {
+            nav.navbar,
+            .progress-tracker,
+            footer,
+            .screen-only,
+            .print-hidden { display: none !important; }
+
+            /* Hide normal category sections — print-sections replaces them */
+            .category-section { display: none !important; }
+
+            .card-checkboxes { display: none !important; }
+            .card-header-row { border-bottom: none; padding-bottom: 0; }
+            .print-only { display: block !important; }
+
+            #print-header {
+                display: block !important;
+                margin-bottom: 1.5rem;
+                padding-bottom: 1rem;
+                border-bottom: 3px solid #002056;
+            }
+            #print-header .ph-logo {
+                display: flex;
+                align-items: center;
+                gap: 0.75rem;
+                margin-bottom: 0.5rem;
+            }
+            #print-header .ph-logo img {
+                width: 48px;
+                height: auto;
+            }
+            #print-header .ph-site-title {
+                font-size: 1.3rem;
+                font-weight: 800;
+                color: #002056;
+            }
+            #print-header .ph-page-title {
+                font-size: 1.05rem;
+                color: #333;
+                margin-bottom: 0.75rem;
+            }
+            #print-header .ph-date {
+                font-size: 0.8rem;
+                color: #666;
+                margin-bottom: 0.75rem;
+            }
+            #print-header .ph-awards {
+                display: flex;
+                gap: 0.75rem;
+                flex-wrap: wrap;
+            }
+            #print-header .ph-badge {
+                padding: 0.35rem 0.85rem;
+                border-radius: 20px;
+                font-weight: bold;
+                font-size: 0.85rem;
+            }
+            #print-header .ph-badge-silver-achieved {
+                background: linear-gradient(135deg, #6c757d, #adb5bd);
+                color: white;
+            }
+            #print-header .ph-badge-gold-achieved {
+                background: linear-gradient(135deg, #ffc107, #fd7e14);
+                color: white;
+            }
+            #print-header .ph-badge-not-achieved {
+                background: #f0f0f0;
+                color: #555;
+                border: 1px solid #ccc;
+            }
+            #print-header .ph-message {
+                margin-top: 0.75rem;
+                padding-top: 0.75rem;
+                border-top: 1px solid #dee2e6;
+                font-size: 0.85rem;
+                color: #333;
+                line-height: 1.5;
+            }
+            #print-header .ph-message p { margin-bottom: 0.4rem; }
+
+            /* Print section headings */
+            .print-section-title {
+                font-size: 1.1rem;
+                font-weight: 800;
+                color: #002056;
+                border-bottom: 2px solid #002056;
+                padding-bottom: 0.4rem;
+                margin: 1.25rem 0 0.75rem;
+                break-after: avoid;
+                page-break-after: avoid;
+            }
+            .print-section {
+                break-inside: avoid-page;
+            }
+
+            .col-12.col-md-6 {
+                width: 100% !important;
+                max-width: 100% !important;
+                flex: 0 0 100% !important;
+            }
+            .item-card {
+                box-shadow: none !important;
+                break-inside: avoid;
+                page-break-inside: avoid;
+                margin-right: 0 !important;
+            }
+            .item-card.completed  { border-color: #28a745 !important; }
+            .item-card.todo-marked:not(.completed) { border-color: #0d6efd !important; }
+            .resource-button {
+                color: #002056 !important;
+                border-color: #002056 !important;
+                font-size: 0.75rem;
+            }
+            .container {
+                max-width: 100% !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Print-only header — hidden on screen, shown when printing -->
+    <div id="print-header">
+        <div class="ph-logo">
+            <img src="https://snippets.usnsandbox.net/images/shield.png" alt="Advisory Organizations Hub logo">
+            <span class="ph-site-title">Advisory Organizations Hub</span>
+        </div>
+        <div class="ph-page-title"><strong>Standards of Excellence Award Requirements — Echelon</strong></div>
+        <div class="ph-date" id="print-date"></div>
+        <div class="ph-awards" id="print-award-status"></div>
+        <div class="ph-message">
+            <p>The following standards reflect the criteria you have selected in working toward your Silver or Gold Standards of Excellence Award. Resource links are included with each standard to assist with your application.</p>
+            <p><strong>Saving as a PDF:</strong> To preserve this document with all resource links intact, open your browser's print dialog and select <em>Save as PDF</em> as the destination. Links will remain active and clickable in the saved file.</p>
+            <p><strong>Connecting with Local Leadership:</strong> We encourage you to share this document with your local Salvation Army divisional or territorial leadership. Their guidance can be invaluable as you work through the application process — please reach out to your corps officer or advisory board liaison to get started.</p>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="screen-only">
+        <h2>Standards of Excellence Award Requirements and document templates<br><span style="color: #ee3a43; font-weight: 800;"><strong>Echelon</strong></span></h2>
+        <p>This page will assist you as you apply for the Standards of Excellence. View application requirements, download templates and more.</p>
+
+       
+    
+         <p>Review the resources included with each standard below and if you would like more information, please use the <a href="https://aohub.usnsandbox.net/index#resources">search feature in the Board Resource Center</a></p>
+        <hr>
+        <p>Feel free to come back at a later date and pick up where you left off — your progress is saved automatically.</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p>Loading data...</p>
+        </div>
+        <div id="content" style="display: none;"></div>
+
+        <!-- Populated by printAll() before window.print() -->
+        <div id="print-sections" class="print-only"></div>
+    </div>
+
+
+    <script>
+        const AWARD_REQUIREMENTS = {
+            silver: {
+                needed: 8,
+                total: 9
+            },
+            gold: {
+                silverNeeded: 8,
+                goldNeeded: 6,
+                silverTotal: 9,
+                goldTotal: 7
+            }
+        };
+
+        const GOOGLE_SHEETS_CONFIG = {
+            spreadsheetId: '1ZV-fxVfOmTVzoZv8DRfBbr1dWFGgfGMgsKKW_XnVPiY',
+            apiKey: 'AIzaSyAPM5xbd3Lxk6dRx_5Kb9U2fUzdUEiwUzw',
+            range: 'Sheet1!A:Z'
+        };
+
+        const categoryConfig = {
+            'Gold': {
+                icon: 'fas fa-crown',
+                iconClass: 'gold-icon',
+                title: 'Gold Standards of Excellence',
+                intro: 'You will need to complete 6/7 of the following requirements in addition to 8/9 of Silver requirements to receive a Gold Standards of Excellence Award',
+                printIntro: 'The following are the Gold Standards of Excellence requirements you have selected as part of your application.'
+            },
+            'Silver': {
+                icon: 'fas fa-medal',
+                iconClass: 'silver-icon',
+                title: 'Silver Standards of Excellence',
+                intro: 'You will need to complete the mandatory requirement and 7/8 of the following for a total of 8/9 to receive a Silver Standards of Excellence Award',
+                printIntro: 'The following are the Silver Standards of Excellence requirements you have selected as part of your application.'
+            }
+        };
+
+        async function fetchSheetsData() {
+            const { spreadsheetId, apiKey, range } = GOOGLE_SHEETS_CONFIG;
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}?key=${apiKey}`;
+
+            try {
+                const response = await fetch(url);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (!data.values || data.values.length === 0) {
+                    throw new Error('No data found in spreadsheet');
+                }
+
+                return data.values;
+            } catch (error) {
+                console.error('Error fetching Google Sheets data:', error);
+                throw error;
+            }
+        }
+
+        function convertSheetsDataToObjects(sheetsData) {
+            if (!sheetsData || sheetsData.length === 0) {
+                return [];
+            }
+
+            const headers = sheetsData[0].map(header => header.trim());
+            const data = [];
+
+            for (let i = 1; i < sheetsData.length; i++) {
+                const row = sheetsData[i];
+                if (row && row.length > 0) {
+                    const rowData = {};
+                    headers.forEach((header, index) => {
+                        rowData[header] = (row[index] || '').toString().trim();
+                    });
+
+                    if (rowData.Description || rowData.step_ID) {
+                        data.push(rowData);
+                    }
+                }
+            }
+
+            return data;
+        }
+
+        function createResourceLinks(row) {
+            const buttons = [];
+
+            for (let i = 1; i <= 7; i++) {
+                const url = row[`resourcelink${i}`];
+                const label = row[`resourcelabel${i}`];
+
+                if (url && url.trim()) {
+                    const buttonText = (label && label.trim()) ? label.trim() : `Resource ${i}`;
+                    buttons.push(`<a href="${url.trim()}" class="btn btn-outline-primary btn-sm resource-button" target="_blank">${buttonText}</a>`);
+                }
+            }
+
+            return buttons.join('');
+        }
+
+        function createItemHTML(item) {
+            const category = item.Category || 'Silver';
+            const config = categoryConfig[category] || categoryConfig['Silver'];
+            const description = item.Description || '';
+            const resources = createResourceLinks(item);
+            const stepId = item.step_ID;
+            const alertText = item.Alert || '';
+            const hasAlert = alertText && alertText.trim() !== '';
+            const isMandatory = hasAlert && /mandatory/i.test(alertText);
+
+            return `
+                <div class="col-12 col-md-6 mb-3">
+                    <div class="item-card h-100" data-step-id="${stepId}" data-category="${category}">
+                        <div class="card-header-row">
+                            <i class="${config.icon} card-cat-icon ${config.iconClass}"></i>
+                            <div class="card-checkboxes">
+                                <div class="checkbox-group todo-group" id="todo-group-${stepId}">
+                                    <label for="todo-cb-${stepId}">To Do</label>
+                                    <input type="checkbox" class="todo-checkbox" id="todo-cb-${stepId}"
+                                           data-step-id="${stepId}"
+                                           ${isMandatory ? 'checked data-mandatory="true"' : ''}>
+                                </div>
+                                <div class="checkbox-group completed-group">
+                                    <label for="completed-cb-${stepId}">Completed</label>
+                                    <input type="checkbox" class="completed-checkbox item-checkbox"
+                                           id="completed-cb-${stepId}"
+                                           data-step-id="${stepId}" data-category="${category}">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="item-content">
+                            ${hasAlert ? `
+                            <div class="alert-section mb-3">
+                                <i class="fas fa-exclamation-triangle alert-icon"></i>${alertText}
+                            </div>
+                            ` : ''}
+                            <div class="description">
+                                ${description}
+                            </div>
+                            ${resources ? `
+                            <div class="resources-section">
+                                <strong>Resources:</strong><br>
+                                ${resources}
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function groupByCategory(data) {
+            const grouped = {};
+            data.forEach(item => {
+                const category = item.Category || 'Silver';
+                if (!grouped[category]) {
+                    grouped[category] = [];
+                }
+                grouped[category].push(item);
+            });
+            return grouped;
+        }
+
+        function renderContent(data) {
+            const grouped = groupByCategory(data);
+            let html = '';
+
+            html += createProgressTracker();
+
+            ['Silver', 'Gold', 'Test'].forEach(categoryKey => {
+                if (grouped[categoryKey] && grouped[categoryKey].length > 0) {
+                    const config = categoryConfig[categoryKey];
+                    html += `
+                        <div class="category-section">
+                            <h2><i class="${config.icon} ${config.iconClass} me-2"></i>${config.title}</h2>
+                            <p class="lead screen-only">${config.intro}</p>
+                            <p class="print-only">${config.printIntro}</p>
+                            <div class="row">
+                                ${grouped[categoryKey].map(item => createItemHTML(item)).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            document.getElementById('content').innerHTML = html;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            initializeProgressTracking();
+        }
+
+        async function loadData() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('content').style.display = 'none';
+
+                const sheetsData = await fetchSheetsData();
+                const data = convertSheetsDataToObjects(sheetsData);
+
+                console.log('Parsed data:', data);
+                console.log('Available columns:', data.length > 0 ? Object.keys(data[0]) : 'No data');
+
+                if (data.length > 0) {
+                    console.log('First row sample:', data[0]);
+                    for (let i = 1; i <= 7; i++) {
+                        const link = data[0][`resourcelink${i}`];
+                        const label = data[0][`resourcelabel${i}`];
+                        if (link) console.log(`Resource ${i}: Link="${link}", Label="${label}"`);
+                    }
+                    console.log('Categories found:', [...new Set(data.map(item => item.Category))]);
+                    console.log('Silver items:', data.filter(item => item.Category === 'Silver').length);
+                    console.log('Gold items:', data.filter(item => item.Category === 'Gold').length);
+                }
+
+                const grouped = groupByCategory(data);
+                console.log('Grouped data:', grouped);
+
+                renderContent(data);
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('loading').innerHTML = `
+                    <div class="alert alert-danger">
+                        <h4>Error Loading Data</h4>
+                        <p>There was an error loading the spreadsheet data: ${error.message}</p>
+                        <p>Please check the console for more details and verify your API configuration.</p>
+                        <small class="text-muted">
+                            Common issues:
+                            <ul>
+                                <li>Invalid API key</li>
+                                <li>Incorrect spreadsheet ID</li>
+                                <li>Spreadsheet is not publicly accessible</li>
+                                <li>API quota exceeded</li>
+                            </ul>
+                        </small>
+                    </div>
+                `;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadData);
+
+        function createProgressTracker() {
+            return `
+                <div class="progress-tracker">
+                    <div class="container">
+                        <div class="progress-tracker-inner">
+                            <div class="tracker-label">
+                                <i class="fas fa-trophy"></i>
+                                Your<br>Progress
+                            </div>
+                            <div class="tracker-bars">
+                                <div class="award-progress">
+                                    <div class="award-title-compact">
+                                        <i class="fas fa-medal silver-icon"></i>
+                                        Silver
+                                    </div>
+                                    <div class="progress-bar-wrapper">
+                                        <div class="progress-bar-container">
+                                            <div class="progress-bar-fill silver-progress" id="silver-progress" style="width: 0%;">
+                                                <span id="silver-text">0/9</span>
+                                            </div>
+                                        </div>
+                                        <div class="progress-threshold" id="silver-threshold" data-label="Goal"></div>
+                                    </div>
+                                    <span class="award-badge badge-not-achieved" id="silver-badge">—</span>
+                                </div>
+                                <div class="award-progress">
+                                    <div class="award-title-compact">
+                                        <i class="fas fa-crown gold-icon"></i>
+                                        Gold
+                                    </div>
+                                    <div class="progress-bar-wrapper">
+                                        <div class="progress-bar-container">
+                                            <div class="progress-bar-fill gold-progress" id="gold-progress" style="width: 0%;">
+                                                <span id="gold-text">0/16</span>
+                                            </div>
+                                        </div>
+                                        <div class="progress-threshold" id="gold-threshold" data-label="Goal"></div>
+                                    </div>
+                                    <span class="award-badge badge-not-achieved" id="gold-badge">—</span>
+                                </div>
+                            </div>
+                            <button class="print-btn" onclick="printAll()">
+                                <i class="fas fa-print"></i> Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function offsetTrackerBelowNavbar() {
+            const navbar = document.querySelector('nav.navbar');
+            const tracker = document.querySelector('.progress-tracker');
+            if (tracker) {
+                tracker.style.top = navbar ? navbar.getBoundingClientRect().height + 'px' : '0px';
+            }
+        }
+
+        function initializeProgressTracking() {
+            document.getElementById('content').classList.add('progress-active');
+
+            offsetTrackerBelowNavbar();
+            window.addEventListener('resize', offsetTrackerBelowNavbar);
+
+            const savedProgress = JSON.parse(localStorage.getItem('echelonProgress') || '{}');
+
+            document.querySelectorAll('.item-card').forEach(card => {
+                const stepId = card.dataset.stepId;
+                const saved = savedProgress[stepId];
+                const todoCb = document.getElementById(`todo-cb-${stepId}`);
+                const completedCb = document.getElementById(`completed-cb-${stepId}`);
+                const todoGroup = document.getElementById(`todo-group-${stepId}`);
+                const isMandatory = todoCb && todoCb.dataset.mandatory === 'true';
+
+                if (!saved) {
+                    if (isMandatory) card.classList.add('todo-marked');
+                    return;
+                }
+
+                if (typeof saved === 'boolean') {
+                    if (saved && completedCb) {
+                        completedCb.checked = true;
+                        card.classList.add('completed');
+                        if (todoGroup) todoGroup.classList.add('hidden-group');
+                    }
+                    return;
+                }
+
+                if (saved.completed && completedCb) {
+                    completedCb.checked = true;
+                    card.classList.add('completed');
+                    if (todoGroup) todoGroup.classList.add('hidden-group');
+                } else {
+                    if ((saved.todo || isMandatory) && todoCb) {
+                        todoCb.checked = true;
+                        card.classList.add('todo-marked');
+                    }
+                }
+            });
+
+            document.querySelectorAll('.todo-checkbox').forEach(cb => {
+                cb.addEventListener('change', handleTodoChange);
+            });
+
+            document.querySelectorAll('.completed-checkbox').forEach(cb => {
+                cb.addEventListener('change', handleCompletedChange);
+            });
+
+            updateProgress();
+        }
+
+        function handleTodoChange(event) {
+            const cb = event.target;
+            const isMandatory = cb.dataset.mandatory === 'true';
+
+            if (isMandatory && !cb.checked) {
+                cb.checked = true;
+                return;
+            }
+
+            const stepId = cb.dataset.stepId;
+            const card = document.querySelector(`div.item-card[data-step-id="${stepId}"]`);
+            if (cb.checked) {
+                card.classList.add('todo-marked');
+            } else {
+                card.classList.remove('todo-marked');
+            }
+
+            saveProgress();
+        }
+
+        function handleCompletedChange(event) {
+            const cb = event.target;
+            const stepId = cb.dataset.stepId;
+            const card = document.querySelector(`div.item-card[data-step-id="${stepId}"]`);
+            const todoGroup = document.getElementById(`todo-group-${stepId}`);
+            const todoCb = document.getElementById(`todo-cb-${stepId}`);
+            const isMandatory = todoCb && todoCb.dataset.mandatory === 'true';
+
+            if (cb.checked) {
+                card.classList.add('completed');
+                card.classList.remove('todo-marked');
+                if (todoGroup) todoGroup.classList.add('hidden-group');
+                triggerCelebration(card);
+            } else {
+                card.classList.remove('completed');
+                if (todoGroup) todoGroup.classList.remove('hidden-group');
+                if (isMandatory && todoCb) {
+                    todoCb.checked = true;
+                    card.classList.add('todo-marked');
+                } else if (todoCb && todoCb.checked) {
+                    card.classList.add('todo-marked');
+                }
+            }
+
+            saveProgress();
+            updateProgress();
+        }
+
+        function triggerCelebration(card) {
+            card.classList.add('completing');
+            setTimeout(() => card.classList.remove('completing'), 500);
+
+            const rect = card.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top + rect.height / 3;
+            const colors = ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff6bcd', '#ffa500', '#00d4aa'];
+
+            for (let i = 0; i < 28; i++) {
+                const el = document.createElement('div');
+                const size = 6 + Math.random() * 7;
+                el.style.cssText = `
+                    position: fixed;
+                    width: ${size}px; height: ${size}px;
+                    border-radius: ${Math.random() > 0.45 ? '50%' : '2px'};
+                    background: ${colors[i % colors.length]};
+                    left: ${cx}px; top: ${cy}px;
+                    pointer-events: none; z-index: 9999;
+                `;
+                document.body.appendChild(el);
+
+                const angle = (i / 28) * Math.PI * 2 + (Math.random() - 0.5) * 0.6;
+                const speed = 70 + Math.random() * 130;
+                const dx = Math.cos(angle) * speed;
+                const dy = Math.sin(angle) * speed - 70;
+
+                el.animate([
+                    { transform: 'translate(-50%,-50%) scale(1) rotate(0deg)', opacity: 1 },
+                    { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0) rotate(${Math.random() * 400}deg)`, opacity: 0 }
+                ], {
+                    duration: 650 + Math.random() * 500,
+                    easing: 'cubic-bezier(0,.9,.57,1)',
+                    fill: 'forwards'
+                }).onfinish = () => el.remove();
+            }
+        }
+
+        function saveProgress() {
+            const progress = {};
+            document.querySelectorAll('.item-card').forEach(card => {
+                const stepId = card.dataset.stepId;
+                const todoCb = document.getElementById(`todo-cb-${stepId}`);
+                const completedCb = document.getElementById(`completed-cb-${stepId}`);
+                const isMandatory = todoCb && todoCb.dataset.mandatory === 'true';
+
+                progress[stepId] = {
+                    todo: todoCb ? todoCb.checked : false,
+                    completed: completedCb ? completedCb.checked : false,
+                    mandatory: isMandatory
+                };
+            });
+            localStorage.setItem('echelonProgress', JSON.stringify(progress));
+        }
+
+        function updateProgress() {
+            const silverChecked = document.querySelectorAll('input.completed-checkbox[data-category="Silver"]:checked').length;
+            const goldChecked   = document.querySelectorAll('input.completed-checkbox[data-category="Gold"]:checked').length;
+            const silverTotal   = document.querySelectorAll('input.completed-checkbox[data-category="Silver"]').length;
+            const goldTotal     = document.querySelectorAll('input.completed-checkbox[data-category="Gold"]').length;
+
+            AWARD_REQUIREMENTS.silver.total        = silverTotal;
+            AWARD_REQUIREMENTS.gold.silverTotal    = silverTotal;
+            AWARD_REQUIREMENTS.gold.goldTotal      = goldTotal;
+
+            const silverProgress = document.getElementById('silver-progress');
+            const silverText     = document.getElementById('silver-text');
+            const silverBadge    = document.getElementById('silver-badge');
+
+            silverProgress.style.width = `${(silverChecked / silverTotal) * 100}%`;
+            silverText.textContent = `${silverChecked}/${silverTotal}`;
+
+            const silverThreshold = document.getElementById('silver-threshold');
+            if (silverThreshold && silverTotal > 0) {
+                const thresholdPct = (AWARD_REQUIREMENTS.silver.needed / silverTotal) * 100;
+                silverThreshold.style.left = `${thresholdPct}%`;
+                silverThreshold.dataset.label = `${AWARD_REQUIREMENTS.silver.needed}/${silverTotal} Goal`;
+            }
+
+            const silverAchieved = silverChecked >= AWARD_REQUIREMENTS.silver.needed;
+            if (silverThreshold) silverThreshold.classList.toggle('achieved', silverAchieved);
+            if (silverAchieved) {
+                silverBadge.textContent = '🎉 Achieved!';
+                silverBadge.className = 'award-badge badge-achieved badge-silver';
+                if (!silverBadge.classList.contains('celebration')) {
+                    silverBadge.classList.add('celebration');
+                    setTimeout(() => silverBadge.classList.remove('celebration'), 1000);
+                }
+            } else {
+                silverBadge.textContent = `${AWARD_REQUIREMENTS.silver.needed - silverChecked} more needed`;
+                silverBadge.className = 'award-badge badge-not-achieved';
+            }
+
+            const goldProgress = document.getElementById('gold-progress');
+            const goldText     = document.getElementById('gold-text');
+            const goldBadge    = document.getElementById('gold-badge');
+
+            const totalCompleted    = silverChecked + goldChecked;
+            const totalRequirements = silverTotal + goldTotal;
+            goldProgress.style.width = `${(totalCompleted / totalRequirements) * 100}%`;
+            goldText.textContent = `${totalCompleted}/${totalRequirements}`;
+
+            const goldThreshold = document.getElementById('gold-threshold');
+            if (goldThreshold && totalRequirements > 0) {
+                const goldNeededTotal = AWARD_REQUIREMENTS.gold.silverNeeded + AWARD_REQUIREMENTS.gold.goldNeeded;
+                const thresholdPct = (goldNeededTotal / totalRequirements) * 100;
+                goldThreshold.style.left = `${thresholdPct}%`;
+                goldThreshold.dataset.label = `${goldNeededTotal}/${totalRequirements} Goal`;
+            }
+
+            const goldAchieved = silverChecked >= AWARD_REQUIREMENTS.gold.silverNeeded &&
+                                 goldChecked   >= AWARD_REQUIREMENTS.gold.goldNeeded;
+            if (goldThreshold) goldThreshold.classList.toggle('achieved', goldAchieved);
+            if (goldAchieved) {
+                goldBadge.textContent = '🏆 Achieved!';
+                goldBadge.className = 'award-badge badge-achieved badge-gold';
+                if (!goldBadge.classList.contains('celebration')) {
+                    goldBadge.classList.add('celebration');
+                    setTimeout(() => goldBadge.classList.remove('celebration'), 1000);
+                }
+            } else {
+                const silverNeeded = Math.max(0, AWARD_REQUIREMENTS.gold.silverNeeded - silverChecked);
+                const goldNeeded   = Math.max(0, AWARD_REQUIREMENTS.gold.goldNeeded   - goldChecked);
+                let badgeText = '';
+                if (silverNeeded > 0 && goldNeeded > 0) {
+                    badgeText = `${silverNeeded} Silver + ${goldNeeded} Gold needed`;
+                } else if (silverNeeded > 0) {
+                    badgeText = `${silverNeeded} more Silver needed`;
+                } else if (goldNeeded > 0) {
+                    badgeText = `${goldNeeded} more Gold needed`;
+                }
+                goldBadge.textContent = badgeText;
+                goldBadge.className = 'award-badge badge-not-achieved';
+            }
+        }
+
+        function updatePrintHeader() {
+            const silverChecked  = document.querySelectorAll('input.completed-checkbox[data-category="Silver"]:checked').length;
+            const goldChecked    = document.querySelectorAll('input.completed-checkbox[data-category="Gold"]:checked').length;
+            const silverAchieved = silverChecked >= AWARD_REQUIREMENTS.silver.needed;
+            const goldAchieved   = silverChecked >= AWARD_REQUIREMENTS.gold.silverNeeded &&
+                                   goldChecked   >= AWARD_REQUIREMENTS.gold.goldNeeded;
+
+            document.getElementById('print-date').textContent =
+                'Generated: ' + new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            const awardsEl = document.getElementById('print-award-status');
+            let badgesHTML = '';
+
+            if (goldAchieved) {
+                badgesHTML += `<span class="ph-badge ph-badge-gold-achieved">🏆 Gold Award — Achieved</span>`;
+                badgesHTML += `<span class="ph-badge ph-badge-silver-achieved">🎉 Silver Award — Achieved</span>`;
+            } else if (silverAchieved) {
+                badgesHTML += `<span class="ph-badge ph-badge-silver-achieved">🎉 Silver Award — Achieved</span>`;
+                const goldSilverNeeded = Math.max(0, AWARD_REQUIREMENTS.gold.silverNeeded - silverChecked);
+                const goldGoldNeeded   = Math.max(0, AWARD_REQUIREMENTS.gold.goldNeeded   - goldChecked);
+                let gapText = '';
+                if (goldSilverNeeded > 0 && goldGoldNeeded > 0) {
+                    gapText = `${goldSilverNeeded} more Silver + ${goldGoldNeeded} more Gold needed for Gold`;
+                } else if (goldGoldNeeded > 0) {
+                    gapText = `${goldGoldNeeded} more Gold needed for Gold Award`;
+                }
+                if (gapText) badgesHTML += `<span class="ph-badge ph-badge-not-achieved">${gapText}</span>`;
+            } else {
+                const silverNeeded = Math.max(0, AWARD_REQUIREMENTS.silver.needed - silverChecked);
+                badgesHTML += `<span class="ph-badge ph-badge-not-achieved">${silverNeeded} more Silver item${silverNeeded !== 1 ? 's' : ''} needed for Silver Award</span>`;
+            }
+
+            awardsEl.innerHTML = badgesHTML;
+        }
+
+        function printAll() {
+            updatePrintHeader();
+
+            const completedCols = [];
+            const todoCols      = [];
+            const otherCols     = [];
+
+            document.querySelectorAll('.item-card').forEach(card => {
+                const completedCb = card.querySelector('.completed-checkbox');
+                const todoCb      = card.querySelector('.todo-checkbox');
+                const col         = card.closest('.col-12');
+
+                if (completedCb && completedCb.checked) {
+                    completedCols.push(col);
+                } else if (todoCb && todoCb.checked) {
+                    todoCols.push(col);
+                } else {
+                    otherCols.push(col);
+                }
+            });
+
+            const sections = [
+                { title: 'Marked Completed', cols: completedCols },
+                { title: 'Marked To Do',     cols: todoCols },
+                { title: 'Other Requirements', cols: otherCols }
+            ];
+
+            const container = document.getElementById('print-sections');
+            container.innerHTML = '';
+
+            sections.forEach(({ title, cols }) => {
+                if (cols.length === 0) return;
+                const section = document.createElement('div');
+                section.className = 'print-section';
+
+                const heading = document.createElement('h3');
+                heading.className = 'print-section-title';
+                heading.textContent = title;
+                section.appendChild(heading);
+
+                const row = document.createElement('div');
+                row.className = 'row';
+                cols.forEach(col => row.appendChild(col.cloneNode(true)));
+                section.appendChild(row);
+
+                container.appendChild(section);
+            });
+
+            window.print();
+
+            setTimeout(() => { container.innerHTML = ''; }, 1500);
+        }
+
+        window.spreadsheetIntegration = {
+            loadData,
+            fetchSheetsData,
+            convertSheetsDataToObjects,
+            renderContent
+        };
+    </script>
+    </div>
+
+<?php include 'footer.php'; ?>

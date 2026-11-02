@@ -1,0 +1,639 @@
+
+    <style>
+        #resources .card-title {
+            border-bottom: 1px solid #d2d2d2;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+        }
+        
+        .file-type-indicator .fas {
+            font-size: 1em;
+        }
+        
+        .file-type-indicator {
+            font-size: 12px;
+            border: 1px solid #d2d2d2;
+            display: inline-block;
+            padding: 7px 21px;
+            border-radius: 3px;
+            background: #e6e6e6;
+            font-family: 'creato_bold';
+        }
+        
+        .file-type-indicator i {
+            margin-right: 6px;
+        }
+        
+        .bg-primaryy {
+            background-color: rgb(97 118 156) !important;
+        }
+
+        .bg-successs {
+            background-color: rgb(0 32 86) !important;
+        }
+
+        .filter-section {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .filter-title { 
+            font-weight: 600; 
+            color: #495057; 
+            margin-bottom: 12px; 
+        }
+        
+        .form-check { 
+            margin-bottom: 8px; 
+        }
+        
+        .form-check-input:checked { 
+            background-color: #0d6efd; 
+            border-color: #0d6efd; 
+        }
+        
+        .search-box { 
+            position: relative; 
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+        
+        .search-input { 
+            padding-left: 40px; 
+        }
+        
+        .file-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background-color: white;
+        }
+        
+        .file-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .card-title { 
+            color: #212529; 
+            font-weight: 600; 
+            font-size: 1.1rem; 
+            margin-bottom: 15px; 
+        }
+        
+        .badge-container { 
+            margin-bottom: 15px; 
+        }
+        
+        .file-type-indicator {
+            font-size: 0.9rem;
+        }
+        
+        .file-type-indicator i {
+            margin-right: 6px;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .reset-filters { 
+            margin-top: 15px; 
+        }
+        
+        .results-count {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        
+        .main-content-container {
+            max-height: 1000px;
+            overflow-y: auto;
+            padding-right: 15px;
+        }
+        
+        .main-content-container::-webkit-scrollbar { 
+            width: 8px; 
+        }
+        
+        .main-content-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .main-content-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .main-content-container::-webkit-scrollbar-thumb:hover { 
+            background: #a8a8a8; 
+        }
+
+        /* Google Sheets Integration Styles */
+        .data-status {
+            background: #e7f3ff;
+            border: 1px solid #b8daff;
+            border-radius: 6px;
+            padding: 12px 20px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            color: #004085;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .loading-spinner {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .error-message {
+            display: none;
+            margin-bottom: 20px;
+        }
+        
+        .refresh-btn {
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid py-4" id="resources">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h1><i style="font-size: 32px; color: #61769c;" class="fas fa-folder-open me-2"></i>Board Resource Center</h1>
+        </div>
+
+        <!-- Data Status and Controls -->
+        <div class="data-status" id="data-status">
+            <span id="status-text">
+                <i class="fas fa-info-circle me-2"></i>Loading files from Google Sheets...
+            </span>
+            <button class="btn btn-sm btn-outline-primary refresh-btn" onclick="loadSheetData(false)">
+                <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+        </div>
+
+        <!-- Loading spinner -->
+        <div class="loading-spinner" id="loading-spinner">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading data from Google Sheets...</p>
+        </div>
+        
+        <!-- Error message -->
+        <div class="error-message alert alert-danger" id="error-message" role="alert">
+            <h4 class="alert-heading">Error Loading Data</h4>
+            <p class="mb-0">Failed to load data from Google Sheets. Please check your internet connection and try again.</p>
+            <hr>
+            <button class="btn btn-outline-danger" onclick="loadSheetData()">Retry</button>
+        </div>
+
+        <div class="row">
+            <!-- Filters Sidebar -->
+            <div class="col-lg-3 col-md-4">
+                <div class="filter-section">
+                    <h5 class="mb-4"><i style="font-size: 20px; color: #61769c;" class="fas fa-filter me-2"></i>Filters</h5>
+
+                    <!-- Search -->
+                    <div class="filter-group mb-3">
+                        <div class="filter-title">Search</div>
+                        <div class="search-box">
+                            <input type="text" class="form-control search-input" id="searchInput" placeholder="Search files...">
+                        </div>
+                    </div>
+
+                    <!-- Resource Type Filter -->
+                    <div class="filter-group mb-3">
+                        <div class="filter-title">Resource Type</div>
+                        <div id="resourceTypeFilters">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="resourceType" id="resourceAll" value="all" checked>
+                                <label class="form-check-label" for="resourceAll">All Types</label>
+                            </div>
+                            <!-- Dynamic filters will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- AO Type Filter -->
+                    <div class="filter-group">
+                        <div class="filter-title">AO Type</div>
+                        <div id="aoTypeFilters">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="aoType" id="aoAll" value="all" checked>
+                                <label class="form-check-label" for="aoAll">All Types</label>
+                            </div>
+                            <!-- Dynamic filters will be added here -->
+                        </div>
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div class="reset-filters">
+                        <button type="button" class="btn btn-outline-secondary btn-sm w-100" id="resetFilters">
+                            <i style="font-size: 20px;" class="fas fa-undo me-2"></i>Reset Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-lg-9 col-md-8">
+                <div class="main-content-container">
+                    <div class="results-count" id="resultsCount"></div>
+                    <div class="row" id="fileContainer"></div>
+                    <div class="no-results d-none" id="noResults">
+                        <i class="fas fa-search fa-3x mb-3"></i>
+                        <h4>No files found</h4>
+                        <p>Try adjusting your filters or search terms.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Google Sheets to JSON Converter
+    class SheetsToJSON {
+        constructor(sheetId, gid = 0) {
+            this.sheetId = sheetId;
+            this.gid = gid;
+            this.csvUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
+        }
+
+        async fetchAsJSON() {
+            try {
+                const response = await fetch(this.csvUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const csvText = await response.text();
+                return this.csvToJSON(csvText);
+            } catch (error) {
+                console.error('Error fetching sheet data:', error);
+                throw error;
+            }
+        }
+
+        csvToJSON(csvText) {
+            const lines = csvText.split('\n').filter(line => line.trim());
+            
+            if (lines.length === 0) {
+                return [];
+            }
+
+            const headers = this.parseCSVRow(lines[0]);
+            const jsonData = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = this.parseCSVRow(lines[i]);
+                const obj = {};
+                
+                headers.forEach((header, index) => {
+                    let value = values[index] || '';
+                    if (value && !isNaN(value) && !isNaN(parseFloat(value))) {
+                        value = parseFloat(value);
+                    }
+                    obj[header] = value;
+                });
+                
+                jsonData.push(obj);
+            }
+
+            return jsonData;
+        }
+
+        parseCSVRow(row) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < row.length; i++) {
+                const char = row[i];
+                
+                if (char === '"') {
+                    if (inQuotes && row[i + 1] === '"') {
+                        current += '"';
+                        i++;
+                    } else {
+                        inQuotes = !inQuotes;
+                    }
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current);
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+            
+            result.push(current);
+            return result;
+        }
+
+        async fetchWithCache(cacheMinutes = 5) {
+            const cacheKey = `sheets_${this.sheetId}_${this.gid}`;
+            const cached = localStorage.getItem(cacheKey);
+            
+            if (cached) {
+                const { data, timestamp } = JSON.parse(cached);
+                const age = Date.now() - timestamp;
+                
+                if (age < cacheMinutes * 60 * 1000) {
+                    console.log('Using cached data');
+                    return data;
+                }
+            }
+            
+            const data = await this.fetchAsJSON();
+            
+            localStorage.setItem(cacheKey, JSON.stringify({
+                data: data,
+                timestamp: Date.now()
+            }));
+            
+            return data;
+        }
+    }
+
+    // Your specific Google Sheet ID
+    const SHEET_ID = '1gfD5PsDnv_-LHbRpBZzyNDJZlTDLXdgaHE7uvMDVJlE';
+    const SHEET_GID = 0;
+
+    let filesData = []; // Will be populated from Google Sheets
+
+    // Function to load data from Google Sheets
+    async function loadSheetData(useCache = true) {
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const errorMessage = document.getElementById('error-message');
+        const statusText = document.getElementById('status-text');
+
+        // Show loading
+        loadingSpinner.style.display = 'block';
+        errorMessage.style.display = 'none';
+        statusText.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading files from Google Sheets...';
+
+        try {
+            const converter = new SheetsToJSON(SHEET_ID, SHEET_GID);
+            const data = useCache ? 
+                await converter.fetchWithCache() : 
+                await converter.fetchAsJSON();
+
+            // Hide loading
+            loadingSpinner.style.display = 'none';
+
+            if (data.length === 0) {
+                statusText.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>No data found in Google Sheet';
+                return;
+            }
+
+            // Transform Google Sheets data to match expected format
+            filesData = data.map((row, index) => {
+                console.log('Raw row data:', row); // Debug log
+                console.log('Available keys:', Object.keys(row)); // Show all column names
+                
+                // The column name has a carriage return at the end - same might apply to Meta Data
+                let fileType = row['File Type\r'] || row['File Type '] || row['File Type'] || row.fileType || 'Unknown';
+                console.log('Original fileType value:', JSON.stringify(fileType));
+                
+                // Try multiple variations for Meta Data column
+                let metaData = row['Meta Data\r'] || row['Meta Data '] || row['Meta Data'] || row.metaData || '';
+                console.log('Original metaData value:', JSON.stringify(metaData));
+                
+                if (fileType && fileType !== 'Unknown') {
+                    fileType = fileType.toString().replace(/\r/g, '').replace(/\n/g, '').trim();
+                    console.log('Cleaned fileType value:', JSON.stringify(fileType));
+                }
+                
+                if (metaData) {
+                    metaData = metaData.toString().replace(/\r/g, '').replace(/\n/g, '').trim();
+                    console.log('Cleaned metaData value:', JSON.stringify(metaData));
+                }
+                
+                const transformedRow = {
+                    id: row.id || (index + 1).toString(),
+                    title: row.title || 'Untitled File',
+                    url: row.url || '#', // Use the URL field directly
+                    'Resource Type': row['Resource Type'] || row.resourceType || 'Uncategorized',
+                    'AO Type': row['AO Type'] || row.aoType || 'General',
+                    'File Type': fileType,
+                    'Meta Data': metaData
+                };
+                
+                console.log('Transformed row:', transformedRow);
+                return transformedRow;
+            });
+            
+            console.log('Final filesData:', filesData); // Debug log
+
+            // Update status
+            statusText.innerHTML = `<i class="fas fa-check-circle me-2"></i>Loaded ${filesData.length} files • Last updated: ${new Date().toLocaleString()}`;
+
+            // Build dynamic filters and display files
+            buildDynamicFilters();
+            filterFiles();
+            
+            // Re-attach search event listener after data loads
+            document.getElementById('searchInput').addEventListener('input', filterFiles);
+
+        } catch (error) {
+            console.error('Failed to load sheet data:', error);
+            loadingSpinner.style.display = 'none';
+            errorMessage.style.display = 'block';
+            statusText.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Failed to load files';
+        }
+    }
+
+    // Build dynamic filter options based on data
+    function buildDynamicFilters() {
+        const resourceTypes = [...new Set(filesData.map(file => file['Resource Type']))].sort();
+        const aoTypes = [...new Set(filesData.map(file => file['AO Type']))].sort();
+
+        // Build Resource Type filters
+        const resourceTypeContainer = document.getElementById('resourceTypeFilters');
+        const existingResourceAll = resourceTypeContainer.querySelector('#resourceAll').parentElement;
+        resourceTypeContainer.innerHTML = '';
+        resourceTypeContainer.appendChild(existingResourceAll);
+
+        resourceTypes.forEach((type, index) => {
+            const id = `resource${index}`;
+            const filterHtml = `
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="resourceType" id="${id}" value="${type}">
+                    <label class="form-check-label" for="${id}">${type}</label>
+                </div>
+            `;
+            resourceTypeContainer.insertAdjacentHTML('beforeend', filterHtml);
+        });
+
+        // Build AO Type filters
+        const aoTypeContainer = document.getElementById('aoTypeFilters');
+        const existingAoAll = aoTypeContainer.querySelector('#aoAll').parentElement;
+        aoTypeContainer.innerHTML = '';
+        aoTypeContainer.appendChild(existingAoAll);
+
+        aoTypes.forEach((type, index) => {
+            const id = `ao${index}`;
+            const filterHtml = `
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="aoType" id="${id}" value="${type}">
+                    <label class="form-check-label" for="${id}">${type}</label>
+                </div>
+            `;
+            aoTypeContainer.insertAdjacentHTML('beforeend', filterHtml);
+        });
+
+        // Re-attach event listeners
+        document.querySelectorAll('input[name="resourceType"]').forEach(r => r.addEventListener('change', filterFiles));
+        document.querySelectorAll('input[name="aoType"]').forEach(r => r.addEventListener('change', filterFiles));
+    }
+
+    function getFileTypeIcon(fileType) {
+        console.log('File type received:', fileType); // Debug log
+        
+        if (!fileType || fileType === 'Unknown') {
+            return '<i class="fas fa-file text-muted"></i> Unknown';
+        }
+        
+        const type = fileType.trim();
+        
+        // Exact matches for your specific file types
+        switch (type) {
+            case 'PDF':
+                return '<i class="fas fa-file-pdf text-danger"></i> PDF';
+            case 'Word Document':
+                return '<i class="fas fa-file-word text-primary"></i> Word Document';
+            case 'Spreadsheet':
+                return '<i class="fas fa-file-excel text-success"></i> Spreadsheet';
+            case 'Image':
+                return '<i class="fas fa-file-image text-info"></i> Image';
+            default:
+                // Fallback with partial matching
+                const lowerType = type.toLowerCase();
+                if (lowerType.includes('pdf')) {
+                    return '<i class="fas fa-file-pdf text-danger"></i> PDF';
+                } else if (lowerType.includes('word') || lowerType.includes('doc')) {
+                    return '<i class="fas fa-file-word text-primary"></i> Word';
+                } else if (lowerType.includes('spreadsheet') || lowerType.includes('excel')) {
+                    return '<i class="fas fa-file-excel text-success"></i> Spreadsheet';
+                } else if (lowerType.includes('image')) {
+                    return '<i class="fas fa-file-image text-info"></i> Image';
+                } else {
+                    return `<i class="fas fa-file text-muted"></i> ${type}`;
+                }
+        }
+    }
+
+    function getBadgeColor(type) {
+        return type === 'Resource Type' ? 'bg-primaryy' : type === 'AO Type' ? 'bg-successs' : 'bg-secondary';
+    }
+
+    function createFileCard(file) {
+        // Use the URL field directly from the Google Sheet
+        const downloadUrl = file.url || '#';
+        
+        return `
+            <div class="col-lg-6 col-xl-4 mb-3">
+                <div class="card file-card h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <div>
+                            <h5 class="card-title">${file.title}</h5>
+                            <div class="badge-container mb-2">
+                                <span class="badge ${getBadgeColor('Resource Type')} me-2">${file['Resource Type']}</span>
+                                <span class="badge ${getBadgeColor('AO Type')}">${file['AO Type']}</span>
+                            </div>
+                            <div class="file-type-indicator mb-3">${getFileTypeIcon(file['File Type'])}</div>
+                        </div>
+                        <a href="${downloadUrl}" target="_blank" class="btn btn-primary w-100 mt-auto">
+                            <i style="font-size: 1em" class="fas fa-download me-2"></i>Download File
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function filterFiles() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        const selectedResourceType = document.querySelector('input[name="resourceType"]:checked')?.value || 'all';
+        const selectedAoType = document.querySelector('input[name="aoType"]:checked')?.value || 'all';
+
+        console.log('Search term:', searchTerm); // Debug log
+
+        const filteredFiles = filesData.filter(file => {
+            console.log('Checking file:', file.title, 'Meta Data:', JSON.stringify(file['Meta Data'])); // Debug log
+            
+            // Simplified search - only search through title and meta data
+            const titleMatch = file.title.toLowerCase().includes(searchTerm);
+            const metaMatch = file['Meta Data'] && file['Meta Data'].toLowerCase().includes(searchTerm);
+            const matchesSearch = searchTerm === '' || titleMatch || metaMatch;
+            
+            console.log('Title match:', titleMatch, 'Meta match:', metaMatch, 'Overall match:', matchesSearch); // Debug log
+
+            const matchesResourceType = selectedResourceType === 'all' || file['Resource Type'] === selectedResourceType;
+            const matchesAoType = selectedAoType === 'all' || file['AO Type'] === selectedAoType;
+
+            return matchesSearch && matchesResourceType && matchesAoType;
+        });
+
+        console.log('Filtered files count:', filteredFiles.length); // Debug log
+        displayFiles(filteredFiles);
+    }
+
+    function displayFiles(files) {
+        const resultsCount = document.getElementById('resultsCount');
+        const fileContainer = document.getElementById('fileContainer');
+        const noResults = document.getElementById('noResults');
+
+        resultsCount.textContent = `Showing ${files.length} file${files.length !== 1 ? 's' : ''}`;
+        if (files.length === 0) {
+            fileContainer.innerHTML = '';
+            noResults.classList.remove('d-none');
+        } else {
+            noResults.classList.add('d-none');
+            fileContainer.innerHTML = files.map(createFileCard).join('');
+        }
+    }
+
+    function resetFilters() {
+        document.getElementById('searchInput').value = '';
+        document.getElementById('resourceAll').checked = true;
+        document.getElementById('aoAll').checked = true;
+        filterFiles();
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load data from Google Sheets
+        loadSheetData();
+        
+        // Add event listeners (search listener will be re-attached after data loads)
+        document.getElementById('resetFilters').addEventListener('click', resetFilters);
+    });
+
+    // Auto-refresh every 10 minutes
+    setInterval(() => {
+        loadSheetData(false);
+    }, 10 * 60 * 1000);
+</script>
+
+</html>
